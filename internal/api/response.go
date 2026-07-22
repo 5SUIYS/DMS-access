@@ -17,12 +17,12 @@ import (
 type Response struct {
 	Code    string      `json:"code"`
 	Message string      `json:"message"`
-	Details interface{} `json:"details,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 // writeSuccess 写出 200 成功响应，携带业务数据。
 func writeSuccess(c *gin.Context, data interface{}) {
-	c.JSON(http.StatusOK, data)
+	c.JSON(http.StatusOK, Response{Code: "SUCCESS", Message: "ok", Data: data})
 }
 
 // writeError 依据 err 的类别映射为相应 HTTP 状态码与提示写出响应。
