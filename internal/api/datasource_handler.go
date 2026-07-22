@@ -11,20 +11,12 @@ import (
 
 // createDatasourceRequest 创建/更新数据源的请求体。
 type createDatasourceRequest struct {
-	Name         string `json:"name"          binding:"required"`
-	Type         string `json:"type"          binding:"required,oneof=mysql redshift"`
-	Env          string `json:"env"           binding:"required,oneof=test prod"`
-	Host         string `json:"host"          binding:"required"`
-	Port         int    `json:"port"          binding:"required,min=1,max=65535"`
-	DatabaseName string `json:"database_name"`
-	Username     string `json:"username"      binding:"required"`
-	Password     string `json:"password"      binding:"required"`
-	Region       string `json:"region"`
-	EndpointARN  string `json:"endpoint_arn"`
+	Name        string `json:"name"         binding:"required"`
+	Type        string `json:"type"         binding:"required,oneof=mysql redshift"`
+	EndpointARN string `json:"endpoint_arn" binding:"required"`
 }
 
 // listDatasources 处理 GET /api/dms/datasources。
-// 响应中 password_enc 永远为空（由 DatasourceSvc 保证）。
 func (h *Handler) listDatasources(c *gin.Context) {
 	items, err := h.deps.DatasourceSvc.ListDatasources(c.Request.Context())
 	if err != nil {
@@ -35,7 +27,6 @@ func (h *Handler) listDatasources(c *gin.Context) {
 }
 
 // createDatasource 处理 POST /api/dms/datasources。
-// 响应中 password_enc 永远为空（由 DatasourceSvc 保证）。
 func (h *Handler) createDatasource(c *gin.Context) {
 	var req createDatasourceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -44,18 +35,12 @@ func (h *Handler) createDatasource(c *gin.Context) {
 	}
 
 	ds := &domain.Datasource{
-		Name:         req.Name,
-		Type:         req.Type,
-		Env:          req.Env,
-		Host:         req.Host,
-		Port:         req.Port,
-		DatabaseName: req.DatabaseName,
-		Username:     req.Username,
-		Region:       req.Region,
-		EndpointARN:  req.EndpointARN,
+		Name:        req.Name,
+		Type:        req.Type,
+		EndpointARN: req.EndpointARN,
 	}
 
-	result, err := h.deps.DatasourceSvc.CreateDatasource(c.Request.Context(), ds, req.Password)
+	result, err := h.deps.DatasourceSvc.CreateDatasource(c.Request.Context(), ds)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -64,7 +49,6 @@ func (h *Handler) createDatasource(c *gin.Context) {
 }
 
 // getDatasource 处理 GET /api/dms/datasources/:id。
-// 响应中 password_enc 永远为空（由 DatasourceSvc 保证）。
 func (h *Handler) getDatasource(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -80,7 +64,6 @@ func (h *Handler) getDatasource(c *gin.Context) {
 }
 
 // updateDatasource 处理 PUT /api/dms/datasources/:id。
-// 响应中 password_enc 永远为空（由 DatasourceSvc 保证）。
 func (h *Handler) updateDatasource(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -95,19 +78,13 @@ func (h *Handler) updateDatasource(c *gin.Context) {
 	}
 
 	ds := &domain.Datasource{
-		ID:           id,
-		Name:         req.Name,
-		Type:         req.Type,
-		Env:          req.Env,
-		Host:         req.Host,
-		Port:         req.Port,
-		DatabaseName: req.DatabaseName,
-		Username:     req.Username,
-		Region:       req.Region,
-		EndpointARN:  req.EndpointARN,
+		ID:          id,
+		Name:        req.Name,
+		Type:        req.Type,
+		EndpointARN: req.EndpointARN,
 	}
 
-	result, err := h.deps.DatasourceSvc.UpdateDatasource(c.Request.Context(), ds, req.Password)
+	result, err := h.deps.DatasourceSvc.UpdateDatasource(c.Request.Context(), ds)
 	if err != nil {
 		writeError(c, err)
 		return
@@ -131,13 +108,14 @@ func (h *Handler) deleteDatasource(c *gin.Context) {
 }
 
 // testDatasource 处理 POST /api/dms/datasources/:id/test。
+// 验证 Endpoint ARN 是否有效。
 func (h *Handler) testDatasource(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Response{Code: "INVALID_ID", Message: "无效的 ID"})
 		return
 	}
-	ok, msg, err := h.deps.DatasourceSvc.TestConnectivity(c.Request.Context(), id)
+	ok, msg, err := h.deps.DatasourceSvc.TestEndpoint(c.Request.Context(), id)
 	if err != nil {
 		writeError(c, err)
 		return

@@ -72,15 +72,13 @@ func run(logger *slog.Logger) error {
 	}
 
 	// 4. 构建依赖
-	encKey := []byte(cfg.Encryption.Key)
-
 	userRepo := repository.NewUserRepository(pool)
-	datasourceRepo := repository.NewDatasourceRepository(pool, encKey)
+	datasourceRepo := repository.NewDatasourceRepository(pool)
 	ticketRepo := repository.NewTicketRepository(pool)
 	planRepo := repository.NewPlanRepository(pool)
 	auditRepo := repository.NewAuditRepository(pool)
 
-	datasourceSvc := datasource.NewService(datasourceRepo, encKey)
+	datasourceSvc := datasource.NewService(datasourceRepo)
 	auditSvc := audit.NewService(auditRepo)
 	ticketSvc := ticket.NewService(ticketRepo, auditRepo)
 

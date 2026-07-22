@@ -235,7 +235,7 @@ func newMemDatasourceRepo() *memDatasourceRepo {
 	return &memDatasourceRepo{datasources: make(map[int64]*domain.Datasource), nextID: 1}
 }
 
-func (r *memDatasourceRepo) Create(_ context.Context, ds *domain.Datasource, _ string) (*domain.Datasource, error) {
+func (r *memDatasourceRepo) Create(_ context.Context, ds *domain.Datasource) (*domain.Datasource, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	cp := *ds
@@ -243,7 +243,6 @@ func (r *memDatasourceRepo) Create(_ context.Context, ds *domain.Datasource, _ s
 	r.nextID++
 	r.datasources[cp.ID] = &cp
 	result := cp
-	result.PasswordEnc = ""
 	return &result, nil
 }
 
@@ -255,7 +254,6 @@ func (r *memDatasourceRepo) GetByID(_ context.Context, id int64) (*domain.Dataso
 		return nil, repository.ErrDatasourceNotFound
 	}
 	cp := *ds
-	cp.PasswordEnc = ""
 	return &cp, nil
 }
 
@@ -265,13 +263,12 @@ func (r *memDatasourceRepo) List(_ context.Context) ([]*domain.Datasource, error
 	var result []*domain.Datasource
 	for _, ds := range r.datasources {
 		cp := *ds
-		cp.PasswordEnc = ""
 		result = append(result, &cp)
 	}
 	return result, nil
 }
 
-func (r *memDatasourceRepo) Update(_ context.Context, ds *domain.Datasource, _ string) (*domain.Datasource, error) {
+func (r *memDatasourceRepo) Update(_ context.Context, ds *domain.Datasource) (*domain.Datasource, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.datasources[ds.ID]; !ok {
@@ -280,7 +277,6 @@ func (r *memDatasourceRepo) Update(_ context.Context, ds *domain.Datasource, _ s
 	cp := *ds
 	r.datasources[ds.ID] = &cp
 	result := cp
-	result.PasswordEnc = ""
 	return &result, nil
 }
 
@@ -296,17 +292,6 @@ func (r *memDatasourceRepo) Delete(_ context.Context, id int64) error {
 
 func (r *memDatasourceRepo) HasActiveTickets(_ context.Context, _ int64) (bool, error) {
 	return false, nil
-}
-
-func (r *memDatasourceRepo) GetByIDWithPassword(_ context.Context, id int64) (*domain.Datasource, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	ds, ok := r.datasources[id]
-	if !ok {
-		return nil, repository.ErrDatasourceNotFound
-	}
-	cp := *ds
-	return &cp, nil
 }
 
 // ─────────────────────────────────────────────
@@ -410,8 +395,7 @@ func newTestEnv() *testEnv {
 	auditSvc := audit.NewService(auditRepo)
 	ticketSvc := ticket.NewService(ticketRepo, auditRepo)
 
-	encKey := make([]byte, 32) // all-zero key for tests
-	dsSvc := datasource.NewService(dsRepo, encKey)
+	dsSvc := datasource.NewService(dsRepo)
 
 	mockDMS := &dmssvc.MockDMSClient{}
 	orch := dmssvc.NewOrchestrator(
@@ -482,23 +466,15 @@ func (e *testEnv) seedDatasources(t *testing.T) (srcID, dstID int64) {
 	src := &domain.Datasource{
 		Name:        "src-mysql",
 		Type:        "mysql",
-		Env:         "test",
-		Host:        "mysql.example.com",
-		Port:        3306,
-		Username:    "user",
 		EndpointARN: "arn:aws:dms:us-east-1:123:endpoint:src",
 	}
 	dst := &domain.Datasource{
 		Name:        "dst-redshift",
 		Type:        "redshift",
-		Env:         "test",
-		Host:        "redshift.example.com",
-		Port:        5439,
-		Username:    "user",
 		EndpointARN: "arn:aws:dms:us-east-1:123:endpoint:dst",
 	}
-	s, _ := e.dsRepo.Create(context.Background(), src, "pwd")
-	d, _ := e.dsRepo.Create(context.Background(), dst, "pwd")
+	s, _ := e.dsRepo.Create(context.Background(), src)
+	d, _ := e.dsRepo.Create(context.Background(), dst)
 	return s.ID, d.ID
 }
 

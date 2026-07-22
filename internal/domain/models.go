@@ -171,22 +171,14 @@ type User struct {
 }
 
 // Datasource 数据源结构体（对应 datasources 表）。
+// 简化模型：DMS endpoint 本身已含全部连接信息，本地仅存 ARN 标记。
 type Datasource struct {
-	ID           int64     `db:"id"`
-	Name         string    `db:"name"`
-	Type         string    `db:"type"`         // mysql | redshift
-	Env          string    `db:"env"`          // test | prod
-	Host         string    `db:"host"`
-	Port         int       `db:"port"`
-	DatabaseName string    `db:"database_name"`
-	Username     string    `db:"username"`
-	PasswordEnc  string    `db:"password_enc"` // AES-GCM 加密后的密码，API 响应中始终屏蔽
-	Region       string    `db:"region"`
-	EndpointARN  string    `db:"endpoint_arn"` // 预创建端点 ARN
-	ExtraConfig  JSONBMap  `db:"extra_config"` // 扩展配置（SSL 等），JSONB
-	CreatedBy    *int64    `db:"created_by"`
-	CreatedAt    time.Time `db:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at"`
+	ID          int64     `db:"id"`
+	Name        string    `db:"name"`
+	Type        string    `db:"type"`         // mysql | redshift
+	EndpointARN string    `db:"endpoint_arn"` // AWS DMS Endpoint ARN（必填）
+	CreatedAt   time.Time `db:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"`
 }
 
 // Ticket 工单核心结构体（对应 tickets 表）。
