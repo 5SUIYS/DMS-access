@@ -45,7 +45,7 @@ func (h *Handler) createDatasource(c *gin.Context) {
 		writeError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, result)
+	writeSuccess(c, result)
 }
 
 // getDatasource 处理 GET /api/dms/datasources/:id。

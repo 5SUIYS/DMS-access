@@ -77,7 +77,7 @@ func (h *Handler) createTicket(c *gin.Context) {
 		writeError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, result)
+	writeSuccess(c, result)
 }
 
 // getTicket 处理 GET /api/dms/tickets/:id，获取工单详情。
