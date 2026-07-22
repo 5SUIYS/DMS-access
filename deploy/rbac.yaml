@@ -1,0 +1,68 @@
+---
+# ============================================================
+# ServiceAccount — dms-access-sa
+#
+# 通过 IRSA（IAM Roles for Service Accounts）将 IAM Role 绑定到
+# 此 ServiceAccount，使 Pod 获得调用 AWS DMS API 的权限，
+# 无需使用长期 Access Key。
+#
+# 使用前必须完成以下步骤：
+#   1. 确认 EKS 集群已启用 OIDC Provider：
+#      aws eks describe-cluster --name <cluster-name> \
+#        --query "cluster.identity.oidc.issuer" --output text
+#
+#   2. 创建 IAM Role，信任策略示例（替换 <OIDC_ISSUER>、<AWS_ACCOUNT_ID>、
+#      <NAMESPACE>）：
+#      {
+#        "Version": "2012-10-17",
+#        "Statement": [{
+#          "Effect": "Allow",
+#          "Principal": { "Federated": "arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/<OIDC_ISSUER>" },
+#          "Action": "sts:AssumeRoleWithWebIdentity",
+#          "Condition": {
+#            "StringEquals": {
+#              "<OIDC_ISSUER>:sub": "system:serviceaccount:<NAMESPACE>:dms-access-sa"
+#            }
+#          }
+#        }]
+#      }
+#
+#   3. 为该 IAM Role 附加以下最小权限策略（或内联策略）：
+#      所需 IAM 权限：
+#        - dms:CreateReplicationTask   — 创建复制任务
+#        - dms:StartReplicationTask    — 启动复制任务
+#        - dms:DescribeReplicationTasks — 查询任务状态（轮询用）
+#      IAM Policy 示例：
+#      {
+#        "Version": "2012-10-17",
+#        "Statement": [{
+#          "Effect": "Allow",
+#          "Action": [
+#            "dms:CreateReplicationTask",
+#            "dms:StartReplicationTask",
+#            "dms:DescribeReplicationTasks"
+#          ],
+#          "Resource": "*"
+#        }]
+#      }
+#      建议将 Resource 限制为具体的复制实例 ARN 和任务 ARN 前缀，
+#      以遵循最小权限原则：
+#        "Resource": [
+#          "arn:aws:dms:<region>:<account-id>:rep:<replication-instance-id>",
+#          "arn:aws:dms:<region>:<account-id>:task:*"
+#        ]
+#
+#   4. 将第 2 步创建的 IAM Role ARN 填写到下方注解中：
+#      eks.amazonaws.com/role-arn: "arn:aws:iam::<AWS_ACCOUNT_ID>:role/<ROLE_NAME>"
+# ============================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dms-access-sa
+  namespace: default
+  labels:
+    app: dms-access
+  annotations:
+    # TODO: 填写上方步骤 4 中创建的 IAM Role ARN
+    # 格式：arn:aws:iam::<AWS_ACCOUNT_ID>:role/<IAM_ROLE_NAME>
+    eks.amazonaws.com/role-arn: "PLACEHOLDER_IAM_ROLE_ARN"

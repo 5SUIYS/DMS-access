@@ -1,0 +1,247 @@
+---
+# ============================================================
+# Namespace（可选）
+# 若集群中已有目标 namespace，请注释掉此块或修改 name 后启用。
+# ============================================================
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: dms-access
+
+---
+# ============================================================
+# ConfigMap — 非敏感配置项
+# 修改以下 data 中的值以匹配实际部署环境。
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dms-access-config
+  namespace: default
+  labels:
+    app: dms-access
+data:
+  # 服务监听地址（格式 ":PORT"）
+  SERVER_ADDR: ":8080"
+  # AWS 区域
+  AWS_REGION: "ap-east-1"
+  # UniAuth 服务地址（用于 JWKS 公钥验签）
+  UNIAUTH_URL: "https://uniauth.example.com"
+  # DMS 在 UniAuth 注册的 appCode
+  UNIAUTH_APP_CODE: "dms"
+  # UniAuth 权限掩码查询接口地址
+  UNIAUTH_MYMASK_URL: "https://uniauth.example.com/api/mymask"
+
+---
+# ============================================================
+# Secret — 敏感配置项（占位）
+# ⚠️  请勿将真实密钥提交到 Git！
+# 部署前需手动填写以下各字段（base64 编码后的值），或通过
+# Sealed Secrets / AWS Secrets Manager / Vault 等工具注入。
+#
+# 快速 base64 编码示例：
+#   echo -n "your-value" | base64
+#
+# 各字段说明：
+#   DATABASE_URL              — PostgreSQL 连接串
+#                               示例：postgres://user:pass@host:5432/dbname?sslmode=require
+#   JWT_SECRET                — UniAuth JWT 签名密钥（≥32 字符，需与 internal 门户共享同一套 JWKS）
+#   ENCRYPTION_KEY            — AES-GCM 加密密钥（恰好 32 字节，hex 编码）
+#                               生成：openssl rand -hex 32
+#   DMS_REPLICATION_INSTANCE_ARN — AWS DMS 常驻复制实例 ARN
+#                               示例：arn:aws:dms:ap-east-1:123456789012:rep:my-instance
+# ============================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dms-access-secret
+  namespace: default
+  labels:
+    app: dms-access
+type: Opaque
+data:
+  # TODO: 替换为实际 base64 编码后的 PostgreSQL 连接串
+  # echo -n "postgres://user:password@host:5432/dms_access?sslmode=require" | base64
+  DATABASE_URL: "PLACEHOLDER_BASE64_DATABASE_URL"
+
+  # TODO: 替换为实际 base64 编码后的 JWT 密钥（≥32 字符）
+  # echo -n "your-jwt-secret-at-least-32-chars" | base64
+  JWT_SECRET: "PLACEHOLDER_BASE64_JWT_SECRET"
+
+  # TODO: 替换为实际 base64 编码后的 AES-GCM 密钥（恰好 32 字节 hex）
+  # openssl rand -hex 32 | tr -d '\n' | base64
+  ENCRYPTION_KEY: "PLACEHOLDER_BASE64_ENCRYPTION_KEY"
+
+  # TODO: 替换为实际 base64 编码后的 DMS 复制实例 ARN
+  # echo -n "arn:aws:dms:ap-east-1:123456789012:rep:my-replication-instance" | base64
+  DMS_REPLICATION_INSTANCE_ARN: "PLACEHOLDER_BASE64_DMS_REPLICATION_INSTANCE_ARN"
+
+---
+# ============================================================
+# Deployment
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dms-access
+  namespace: default
+  labels:
+    app: dms-access
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dms-access
+  template:
+    metadata:
+      labels:
+        app: dms-access
+    spec:
+      serviceAccountName: dms-access-sa
+      containers:
+        - name: dms-access
+          # TODO: 替换为实际镜像仓库地址与版本标签
+          image: your-registry/dms-access:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            # ── 敏感配置：来自 Secret dms-access-secret ──────────────────
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: dms-access-secret
+                  key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: dms-access-secret
+                  key: JWT_SECRET
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: dms-access-secret
+                  key: ENCRYPTION_KEY
+            - name: DMS_REPLICATION_INSTANCE_ARN
+              valueFrom:
+                secretKeyRef:
+                  name: dms-access-secret
+                  key: DMS_REPLICATION_INSTANCE_ARN
+            # ── 非敏感配置：来自 ConfigMap dms-access-config ─────────────
+            - name: SERVER_ADDR
+              valueFrom:
+                configMapKeyRef:
+                  name: dms-access-config
+                  key: SERVER_ADDR
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: dms-access-config
+                  key: AWS_REGION
+            - name: UNIAUTH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: dms-access-config
+                  key: UNIAUTH_URL
+            - name: UNIAUTH_APP_CODE
+              valueFrom:
+                configMapKeyRef:
+                  name: dms-access-config
+                  key: UNIAUTH_APP_CODE
+            - name: UNIAUTH_MYMASK_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: dms-access-config
+                  key: UNIAUTH_MYMASK_URL
+          # 存活探针：连续 3 次失败后重启容器
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          # 就绪探针：探针通过后才将 Pod 加入 Service 负载均衡
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+      securityContext:
+        fsGroup: 1000
+
+---
+# ============================================================
+# Service — ClusterIP（集群内部访问，由 Ingress 对外暴露）
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: dms-access
+  namespace: default
+  labels:
+    app: dms-access
+spec:
+  type: ClusterIP
+  selector:
+    app: dms-access
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+
+---
+# ============================================================
+# Ingress — 将 /api/dms/ 路由到 dms-access Service
+#
+# 根据实际使用的 Ingress Controller 启用对应注解块：
+#   - Nginx Ingress Controller：启用 nginx 注解块
+#   - AWS Load Balancer Controller（ALB）：启用 alb 注解块
+# ============================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dms-access
+  namespace: default
+  labels:
+    app: dms-access
+  annotations:
+    # ── Nginx Ingress Controller ──────────────────────────────
+    # kubernetes.io/ingress.class: "nginx"
+    # nginx.ingress.kubernetes.io/use-regex: "true"
+
+    # ── AWS Load Balancer Controller（ALB） ────────────────────
+    # kubernetes.io/ingress.class: "alb"
+    # alb.ingress.kubernetes.io/scheme: internal
+    # alb.ingress.kubernetes.io/target-type: ip
+    # alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /api/dms/
+            pathType: Prefix
+            backend:
+              service:
+                name: dms-access
+                port:
+                  number: 8080
