@@ -44,12 +44,13 @@ type jwtHeader struct {
 	Typ string `json:"typ"`
 }
 
-// authenticator 是 Authenticator 的默认实现：基于 JWKSCache 做 RS256 本地验签。
-// DMS 仅使用 UniAuth，不支持 HS256 本地登录。
+// authenticator 是 Authenticator 的默认实现：基于 JWKSCache 做 RS256 本地验签，
+// 同时支持本地 HS256 token（kid="local"，用于免 UniAuth 登录）。
 type authenticator struct {
-	keys     JWKSCache
-	appCode  string
-	uidClaim string
+	keys           JWKSCache
+	appCode        string
+	uidClaim       string
+	localJWTSecret string // 本地 HS256 密钥；空表示禁用本地登录
 	// leeway 为过期校验允许的时钟偏移容差，默认 0（严格按 exp 判定）。
 	leeway time.Duration
 	// now 便于测试注入固定时间；默认 time.Now。
@@ -74,6 +75,14 @@ func WithUIDClaim(name string) AuthenticatorOption {
 		if strings.TrimSpace(name) != "" {
 			a.uidClaim = name
 		}
+	}
+}
+
+// WithLocalJWTSecret 启用本地 HS256 token 验签（免 UniAuth 登录）。
+// secret 为空时不启用本地验签，全部走 UniAuth JWKS。
+func WithLocalJWTSecret(secret string) AuthenticatorOption {
+	return func(a *authenticator) {
+		a.localJWTSecret = secret
 	}
 }
 
@@ -102,10 +111,19 @@ func NewAuthenticator(keys JWKSCache, appCode string, opts ...AuthenticatorOptio
 }
 
 // Authenticate 实现 Authenticator。
+// 优先尝试本地 HS256 token（kid="local"），不可用时走 UniAuth JWKS RS256。
 func (a *authenticator) Authenticate(ctx context.Context, bearerToken string) (string, error) {
 	raw := stripBearer(bearerToken)
 	if raw == "" {
 		return "", ErrNoToken
+	}
+
+	if a.localJWTSecret != "" && isLocalToken(raw) {
+		id, err := VerifyLocalJWT(raw, a.localJWTSecret)
+		if err != nil {
+			return "", err
+		}
+		return id.UID, nil
 	}
 
 	claims, err := a.verifyAndParseClaims(ctx, raw)
@@ -117,11 +135,16 @@ func (a *authenticator) Authenticate(ctx context.Context, bearerToken string) (s
 }
 
 // AuthenticateIdentity 实现 Authenticator。
+// 优先尝试本地 HS256 token（kid="local"），不可用时走 UniAuth JWKS RS256。
 // 额外提取 username / display_name 声明；display_name 缺省为空串。
 func (a *authenticator) AuthenticateIdentity(ctx context.Context, bearerToken string) (Identity, error) {
 	raw := stripBearer(bearerToken)
 	if raw == "" {
 		return Identity{}, ErrNoToken
+	}
+
+	if a.localJWTSecret != "" && isLocalToken(raw) {
+		return VerifyLocalJWT(raw, a.localJWTSecret)
 	}
 
 	claims, err := a.verifyAndParseClaims(ctx, raw)

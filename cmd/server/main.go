@@ -94,7 +94,8 @@ func run(logger *slog.Logger) error {
 
 	// 认证与鉴权
 	jwks := auth.NewJWKSCache(cfg.JWKSEndpoint(), cfg.UniAuth.JWKSTimeout)
-	authenticator := auth.NewAuthenticator(jwks, cfg.UniAuth.AppCode)
+	authenticator := auth.NewAuthenticator(jwks, cfg.UniAuth.AppCode,
+			auth.WithLocalJWTSecret(cfg.Server.JWTSecret))
 	resolver := auth.NewPermissionResolver(cfg.UniAuth.MyMaskURL, cfg.UniAuth.AppCode, cfg.UniAuth.PermCacheTTL)
 
 	// UserIDFunc：将 UniAuth uid 映射到数据库内部 ID
