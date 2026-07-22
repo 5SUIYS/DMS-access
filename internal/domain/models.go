@@ -161,29 +161,29 @@ func toBytes(src interface{}) ([]byte, error) {
 
 // User 用户记录（对应 users 表）。
 type User struct {
-	ID         int64     `db:"id"`
+	ID         int64     `db:"id"          json:"id"`
 	Username   string    `db:"username"`
 	Email      string    `db:"email"`
 	UniauthUID string    `db:"uniauth_uid"` // UniAuth uid，首次登录自动创建
 	PermMask   string    `db:"perm_mask"`   // 权限位掩码缓存（短 TTL）
-	CreatedAt  time.Time `db:"created_at"`
-	UpdatedAt  time.Time `db:"updated_at"`
+	CreatedAt  time.Time `db:"created_at"  json:"created_at"`
+	UpdatedAt  time.Time `db:"updated_at"  json:"updated_at"`
 }
 
 // Datasource 数据源结构体（对应 datasources 表）。
 // 简化模型：DMS endpoint 本身已含全部连接信息，本地仅存 ARN 标记。
 type Datasource struct {
-	ID          int64     `db:"id"`
-	Name        string    `db:"name"`
-	Type        string    `db:"type"`         // mysql | redshift
-	EndpointARN string    `db:"endpoint_arn"` // AWS DMS Endpoint ARN（必填）
-	CreatedAt   time.Time `db:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
+	ID          int64     `db:"id"          json:"id"`
+	Name        string    `db:"name"        json:"name"`
+	Type        string    `db:"type"        json:"type"`
+	EndpointARN string    `db:"endpoint_arn" json:"endpoint_arn"`
+	CreatedAt   time.Time `db:"created_at"  json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at"  json:"updated_at"`
 }
 
 // Ticket 工单核心结构体（对应 tickets 表）。
 type Ticket struct {
-	ID              int64           `db:"id"`
+	ID              int64           `db:"id"          json:"id"`
 	Title           string          `db:"title"`
 	Status          TicketStatus    `db:"status"`
 	SrcDatasourceID int64           `db:"src_datasource_id"`
@@ -202,13 +202,13 @@ type Ticket struct {
 	DMSTaskARN      string          `db:"dms_task_arn"`
 	DMSTaskStatus   string          `db:"dms_task_status"` // AWS 原始状态
 	ErrorDetail     string          `db:"error_detail"`
-	CreatedAt       time.Time       `db:"created_at"`
-	UpdatedAt       time.Time       `db:"updated_at"`
+	CreatedAt       time.Time       `db:"created_at"  json:"created_at"`
+	UpdatedAt       time.Time       `db:"updated_at"  json:"updated_at"`
 }
 
 // DMSPlan DMS 执行方案（对应 dms_plans 表）。
 type DMSPlan struct {
-	ID                     int64                `db:"id"`
+	ID                     int64                `db:"id"          json:"id"`
 	TicketID               int64                `db:"ticket_id"`
 	SrcEndpointARN         string               `db:"src_endpoint_arn"`
 	DstEndpointARN         string               `db:"dst_endpoint_arn"`
@@ -223,10 +223,10 @@ type DMSPlan struct {
 
 // AuditLog 审计日志（对应 audit_logs 表）。
 type AuditLog struct {
-	ID         int64     `db:"id"`
+	ID         int64     `db:"id"          json:"id"`
 	TicketID   *int64    `db:"ticket_id"`
 	OperatorID *int64    `db:"operator_id"`
 	Action     string    `db:"action"` // submit | approve | reject | generate_plan | execute | status_change
 	Detail     JSONBMap  `db:"detail"` // JSONB 操作附加信息，不含密码字段
-	CreatedAt  time.Time `db:"created_at"`
+	CreatedAt  time.Time `db:"created_at"  json:"created_at"`
 }
