@@ -184,24 +184,24 @@ type Datasource struct {
 // Ticket 工单核心结构体（对应 tickets 表）。
 type Ticket struct {
 	ID              int64           `db:"id"          json:"id"`
-	Title           string          `db:"title"`
-	Status          TicketStatus    `db:"status"`
-	SrcDatasourceID int64           `db:"src_datasource_id"`
-	DstDatasourceID int64           `db:"dst_datasource_id"`
-	TargetSchema    string          `db:"target_schema"`
-	MigrationType   MigrationType   `db:"migration_type"`
-	TableSelections TableSelections `db:"table_selections"` // JSONB: [{schema_name, table_name}]
-	Reason          string          `db:"reason"`
-	SubmitterID     *int64          `db:"submitter_id"`
-	SubmittedAt     *time.Time      `db:"submitted_at"`
-	ReviewerID      *int64          `db:"reviewer_id"`
-	ReviewedAt      *time.Time      `db:"reviewed_at"`
-	ReviewComment   string          `db:"review_comment"`
-	ExecutorID      *int64          `db:"executor_id"`
-	ExecutedAt      *time.Time      `db:"executed_at"`
-	DMSTaskARN      string          `db:"dms_task_arn"`
-	DMSTaskStatus   string          `db:"dms_task_status"` // AWS 原始状态
-	ErrorDetail     string          `db:"error_detail"`
+	Title           string          `db:"title"                 json:"title"`
+	Status          TicketStatus    `db:"status"                json:"status"`
+	SrcDatasourceID int64           `db:"src_datasource_id"      json:"src_datasource_id"`
+	DstDatasourceID int64           `db:"dst_datasource_id"      json:"dst_datasource_id"`
+	TargetSchema    string          `db:"target_schema"          json:"target_schema"`
+	MigrationType   MigrationType   `db:"migration_type"         json:"migration_type"`
+	TableSelections TableSelections `db:"table_selections"      json:"table_selections"`
+	Reason          string          `db:"reason"                 json:"reason"`
+	SubmitterID     *int64          `db:"submitter_id"           json:"submitter_id"`
+	SubmittedAt     *time.Time      `db:"submitted_at"           json:"submitted_at"`
+	ReviewerID      *int64          `db:"reviewer_id"            json:"reviewer_id"`
+	ReviewedAt      *time.Time      `db:"reviewed_at"            json:"reviewed_at"`
+	ReviewComment   string          `db:"review_comment"          json:"review_comment"`
+	ExecutorID      *int64          `db:"executor_id"            json:"executor_id"`
+	ExecutedAt      *time.Time      `db:"executed_at"            json:"executed_at"`
+	DMSTaskARN      string          `db:"dms_task_arn"           json:"dms_task_arn"`
+	DMSTaskStatus   string          `db:"dms_task_status"       json:"dms_task_status"`
+	ErrorDetail     string          `db:"error_detail"           json:"error_detail"`
 	CreatedAt       time.Time       `db:"created_at"  json:"created_at"`
 	UpdatedAt       time.Time       `db:"updated_at"  json:"updated_at"`
 }
@@ -213,7 +213,7 @@ type DMSPlan struct {
 	SrcEndpointARN         string               `db:"src_endpoint_arn"`
 	DstEndpointARN         string               `db:"dst_endpoint_arn"`
 	ReplicationInstanceARN string               `db:"replication_instance_arn"`
-	MigrationType          MigrationType        `db:"migration_type"`
+	MigrationType          MigrationType        `db:"migration_type"         json:"migration_type"`
 	TableMappingsJSON      string               `db:"table_mappings_json"`  // 完整 DMS table-mappings JSON
 	TaskSettingsJSON       string               `db:"task_settings_json"`   // DMS task settings JSON
 	PreconditionWarnings   PreconditionWarnings `db:"precondition_warnings"` // JSONB 前置检查结果
