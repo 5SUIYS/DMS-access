@@ -209,24 +209,24 @@ type Ticket struct {
 // DMSPlan DMS 执行方案（对应 dms_plans 表）。
 type DMSPlan struct {
 	ID                     int64                `db:"id"          json:"id"`
-	TicketID               int64                `db:"ticket_id"`
-	SrcEndpointARN         string               `db:"src_endpoint_arn"`
-	DstEndpointARN         string               `db:"dst_endpoint_arn"`
-	ReplicationInstanceARN string               `db:"replication_instance_arn"`
+	TicketID               int64                `db:"ticket_id"                    json:"ticket_id"`
+	SrcEndpointARN         string               `db:"src_endpoint_arn"             json:"src_endpoint_arn"`
+	DstEndpointARN         string               `db:"dst_endpoint_arn"             json:"dst_endpoint_arn"`
+	ReplicationInstanceARN string               `db:"replication_instance_arn"    json:"replication_instance_arn"`
 	MigrationType          MigrationType        `db:"migration_type"         json:"migration_type"`
-	TableMappingsJSON      string               `db:"table_mappings_json"`  // 完整 DMS table-mappings JSON
-	TaskSettingsJSON       string               `db:"task_settings_json"`   // DMS task settings JSON
-	PreconditionWarnings   PreconditionWarnings `db:"precondition_warnings"` // JSONB 前置检查结果
-	GeneratedBy            *int64               `db:"generated_by"`
-	GeneratedAt            time.Time            `db:"generated_at"`
+	TableMappingsJSON      string               `db:"table_mappings_json"          json:"table_mappings_json"`  // 完整 DMS table-mappings JSON
+	TaskSettingsJSON       string               `db:"task_settings_json"           json:"task_settings_json"`   // DMS task settings JSON
+	PreconditionWarnings   PreconditionWarnings `db:"precondition_warnings"       json:"precondition_warnings"`
+	GeneratedBy            *int64               `db:"generated_by"                json:"generated_by"`
+	GeneratedAt            time.Time            `db:"generated_at"                json:"generated_at"`
 }
 
 // AuditLog 审计日志（对应 audit_logs 表）。
 type AuditLog struct {
 	ID         int64     `db:"id"          json:"id"`
-	TicketID   *int64    `db:"ticket_id"`
-	OperatorID *int64    `db:"operator_id"`
-	Action     string    `db:"action"` // submit | approve | reject | generate_plan | execute | status_change
-	Detail     JSONBMap  `db:"detail"` // JSONB 操作附加信息，不含密码字段
+	TicketID   *int64    `db:"ticket_id"                    json:"ticket_id"`
+	OperatorID *int64    `db:"operator_id"   json:"operator_id"`
+	Action     string    `db:"action"       json:"action"`
+	Detail     JSONBMap  `db:"detail"       json:"detail"` // JSONB 操作附加信息，不含密码字段
 	CreatedAt  time.Time `db:"created_at"  json:"created_at"`
 }
