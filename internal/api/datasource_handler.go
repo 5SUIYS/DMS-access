@@ -12,7 +12,7 @@ import (
 // createDatasourceRequest 创建/更新数据源的请求体。
 type createDatasourceRequest struct {
 	Name        string `json:"name"         binding:"required"`
-	Type        string `json:"type"         binding:"required,oneof=mysql redshift"`
+	Type        string `json:"type"         binding:"required,oneof=mysql redshift postgresql s3"`
 	EndpointARN string `json:"endpoint_arn" binding:"required"`
 }
 
